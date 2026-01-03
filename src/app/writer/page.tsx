@@ -245,7 +245,11 @@ export default function WriterPage() {
         }),
       })
 
-      if (!response.ok) throw new Error('Chat failed')
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('[Generate] Chat API failed:', response.status, errorText)
+        throw new Error(`Chat API failed (${response.status}): ${errorText}`)
+      }
 
       const reader = response.body?.getReader()
       if (!reader) throw new Error('No reader')
@@ -302,11 +306,20 @@ export default function WriterPage() {
       }
     } catch (error) {
       console.error('Generate blog failed:', error)
-      setGenerationStatus('Error occurred')
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error'
+      setGenerationStatus(`❌ Error: ${errorMsg}`)
+
+      // Show error in chat
+      const errorChatMsg: Message = {
+        id: `error-${Date.now()}`,
+        role: 'assistant',
+        content: `⚠️ エラーが発生しました: ${errorMsg}\n\n詳細はコンソールをご確認ください。`,
+      }
+      setMessages(prev => [...prev, errorChatMsg])
     } finally {
       setGenerating(false)
       setIsStreaming(false)
-      setGenerationStatus('')
+      // Don't clear status on error - let user see it
     }
   }
 
