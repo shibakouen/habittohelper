@@ -812,7 +812,7 @@ ${SAMPLE_CONTENT.bad.map(s => `- ${s.type}: ${s.text}`).join('\n')}
 ---
 
 ## データソース情報
-- 最終検証日: ${habittoData._metadata.lastVerified}
+- 最終更新日: ${habittoData._metadata.lastUpdated}
 - クロール日: ${habittoData.crawlMetadata.crawlDate}
 - 総ページ数: ${habittoData.crawlMetadata.totalPagesCrawled}ページ
 

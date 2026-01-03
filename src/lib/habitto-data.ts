@@ -195,10 +195,9 @@ export interface CrawledPage {
 
 export interface HabittoVerifiedData {
   _metadata: {
-    version: string
-    lastVerified: string
-    source: string
-    note: string
+    lastUpdated: string
+    sources: string[]
+    notes: string
   }
   company: HabittoCompany
   funding: HabittoFunding
@@ -215,7 +214,7 @@ export interface HabittoVerifiedData {
   mediaFeatures: string[]
   comparison: Record<string, Record<string, string>>
   internalLinks: Array<{ url: string; title: string; keywords: string[]; priority: number }>
-  commonMisconceptions: Array<{ wrong: string; correct: string }>
+  commonMisconceptions: Record<string, { wrong: string; correct: string }>
   writingGuidelines: {
     tone: string[]
     avoid: string[]
@@ -383,7 +382,7 @@ export function getVerifiedFactsContext(): string {
 - 累計調達額: ${data.funding.totalRaised.jpy}
 
 ## よくある間違い（絶対に避けること）
-${data.commonMisconceptions.map(m => `- ❌ 間違い: ${m.wrong}\n  ✅ 正解: ${m.correct}`).join('\n')}
+${Object.values(data.commonMisconceptions).map(m => `- ❌ 間違い: ${m.wrong}\n  ✅ 正解: ${m.correct}`).join('\n')}
 
 ---
 【警告】上記以外の数字や事実は使用しないでください。特に他行宛振込手数料（${data.fees.transferFee.toOtherBank.formatted}）は間違いやすいので注意。
