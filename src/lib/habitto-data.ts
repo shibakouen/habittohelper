@@ -206,14 +206,45 @@ export interface HabittoVerifiedData {
   debitCard: HabittoDebitCard
   advisor: HabittoAdvisor
   fees: HabittoFees
-  customerStages: Array<{ stage: string; requirement: string; benefits: string[] }>
+  customerStages: {
+    description: string
+    note: string
+    stages: Array<{
+      name: string
+      level: number
+      atmFreeCount: number
+      transferFreeCount: number
+      note?: string
+    }>
+  }
   partners: { banking: string }
-  tools: Array<{ name: string; url: string; description: string }>
-  research: Array<{ title: string; date: string; keyFinding: string }>
+  tools: Record<string, {
+    name: string
+    nameEn: string
+    description: string
+    dataSource?: string
+    purpose?: string
+  }>
+  research: Record<string, {
+    name: string
+    date: string
+    sampleSize: number
+    findings: Array<{
+      stat: string
+      finding: string
+    }>
+  }>
   awards: string[]
   mediaFeatures: string[]
   comparison: Record<string, Record<string, string>>
-  internalLinks: Array<{ url: string; title: string; keywords: string[]; priority: number }>
+  internalLinks: {
+    pages: Array<{
+      url: string
+      name: string
+      anchorTexts: string[]
+      linkContexts: string[]
+    }>
+  }
   commonMisconceptions: Record<string, { wrong: string; correct: string }>
   writingGuidelines: {
     tone: string[]
