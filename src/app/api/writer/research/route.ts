@@ -10,6 +10,7 @@ import {
   getProject,
   getProjectFiles,
   getResearchByKeyword,
+  getResearchByProjectKeyword,
   saveResearch,
   isResearchStale,
   type ResearchData,
@@ -103,21 +104,42 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Get project for context and project-level lookup
+    const project = await getProject(conversation.project_id)
+
     // Check for cached research (unless force refresh)
     if (!forceRefresh) {
+      // First check this conversation's research
       const cached = await getResearchByKeyword(conversationId, keyword)
       if (cached && !isResearchStale(cached, 24)) {
-        console.log(`[Research API] Returning cached research`)
+        console.log(`[Research API] Returning cached research (conversation-level)`)
         return NextResponse.json({
           research: cached.research_data,
           cached: true,
+          cacheLevel: 'conversation',
           createdAt: cached.created_at,
         })
       }
-    }
 
-    // Get project context for better research queries
-    const project = await getProject(conversation.project_id)
+      // Then check project-level research (same keyword, different conversation)
+      if (project) {
+        const projectCached = await getResearchByProjectKeyword(project.id, keyword)
+        if (projectCached && !isResearchStale(projectCached, 24)) {
+          console.log(`[Research API] Returning cached research (project-level) from conversation ${projectCached.conversation_id}`)
+
+          // Optionally save a copy for this conversation for faster future lookups
+          // (commented out to avoid data duplication)
+          // await saveResearch(conversationId, keyword, projectCached.research_data)
+
+          return NextResponse.json({
+            research: projectCached.research_data,
+            cached: true,
+            cacheLevel: 'project',
+            createdAt: projectCached.created_at,
+          })
+        }
+      }
+    }
     const files = await getProjectFiles(conversation.project_id)
 
     // Extract context from project files

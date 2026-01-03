@@ -424,6 +424,38 @@ export async function getResearchByKeyword(
   return data as Research
 }
 
+/**
+ * Get research by project + keyword (across all conversations in the project)
+ * This allows reusing research data when the same keyword is used in different conversations
+ */
+export async function getResearchByProjectKeyword(
+  projectId: string,
+  keyword: string
+): Promise<Research | null> {
+  // First get all conversation IDs for this project
+  const { data: conversations, error: convError } = await supabase
+    .from('writer_conversations')
+    .select('id')
+    .eq('project_id', projectId)
+
+  if (convError || !conversations?.length) return null
+
+  const conversationIds = conversations.map(c => c.id)
+
+  // Then get the most recent research for this keyword from any of those conversations
+  const { data, error } = await supabase
+    .from('writer_research')
+    .select('*')
+    .in('conversation_id', conversationIds)
+    .eq('keyword', keyword)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single()
+
+  if (error) return null
+  return data as Research
+}
+
 export async function saveResearch(
   conversationId: string,
   keyword: string,
