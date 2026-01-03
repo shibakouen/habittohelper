@@ -12,57 +12,177 @@ import verifiedData from '@/data/habitto-verified-data.json'
 
 // Type definitions based on the JSON structure
 export interface HabittoCompany {
-  name: string
   legalName: string
-  registrationNumber: string
+  brandName: string
+  brandNameJp: string
+  parentCompany: string
+  bankPartner: string
+  website: string
+  purpose: string
+  tagline: string
+  mainMessage: string
   founded: string
-  headquarters: string
-  leadership: {
-    ceo: string
-    coo: string
-    cto?: string
+  serviceLaunch: string
+  registration: {
+    type: string
+    number: string
+    date: string
+    note: string
   }
-  employeeCount: string
+  address: {
+    full: string
+    area: string
+    moveDate: string
+    previousAddress: string
+    phone: string
+  }
+  targetAudience: {
+    ageRange: string
+    primaryAge: string
+    description: string
+    characteristics: string[]
+  }
+  businessHours: {
+    weekday: string
+    closedDays: string[]
+  }
+  contact: {
+    support: string
+    complaints: string
+    press: string
+  }
+  socialMedia: {
+    x: string
+    instagram: string
+    linkedin: string
+  }
+  values: Array<{
+    name: string
+    description: string
+  }>
+  employees: number
+  disputeResolution: {
+    description: string
+    centers: Array<{
+      name: string
+      phone: string
+    }>
+  }
 }
 
 export interface HabittoFunding {
-  seriesA: {
-    amount: string
-    date: string
-    leadInvestor: string
-    allInvestors: string[]
-    cumulativeTotal: string
+  totalRaised: {
+    jpy: string
+    usd: string
   }
+  rounds: Array<{
+    name: string
+    date: string
+    amount: string
+    investors: string[]
+    note?: string
+  }>
 }
 
 export interface HabittoSavingsAccount {
-  interestRate: string
-  interestRateNumeric: number
-  maxBalance: string
-  conditions: string
-  keyMessage: string
-  differentiator: string
+  url: string
+  interestRate: {
+    rate: string
+    rateAfterTax: string
+    maxAmount: number
+    maxAmountFormatted: string
+    excessRate: string
+    excessRateAfterTax: string
+    conditions: string
+  }
+  interestRateHistory: Array<{
+    period: string
+    rate: string
+    type: string
+    note?: string
+  }>
+  accountType: string
+  openingTime: string
+  openingSteps: number
+  features: string[]
+  keyMessages: string[]
 }
 
 export interface HabittoDebitCard {
+  url: string
   cashbackRate: string
-  cashbackRateNumeric: number
-  conditions: string
-  keyMessage: string
+  cashbackTiming: string
+  cardBrand: string
+  issuanceFee: string
+  annualFee: string
+  eligibleTransactions: string[]
+  excludedTransactions: string[]
+  dailyLimit: {
+    shopping: string
+    atmWithdrawal: string
+  }
   features: string[]
+  keyMessages: string[]
 }
 
 export interface HabittoAdvisor {
+  url: string
   cost: string
-  keyMessage: string
-  differentiator: string
-  services: string[]
+  qualification: string
+  methods: string[]
+  shortConsultation: string
+  topics: string[]
+  features: string[]
+  keyMessages: string[]
+  usageRate: string
 }
 
 export interface HabittoFees {
-  atmWithdrawal: string
-  domesticTransfer: string
-  freeTransfersNote: string
+  transferFee: {
+    toOtherBank: {
+      amount: number
+      unit: string
+      formatted: string
+      note: string
+    }
+    toGMOAozora: {
+      amount: number
+      formatted: string
+      note: string
+    }
+  }
+  atmFee: {
+    deposit: {
+      amount: number
+      formatted: string
+      note: string
+    }
+    withdrawal: {
+      amount: number
+      unit: string
+      formatted: string
+      note: string
+    }
+  }
+  accountFee: {
+    amount: number
+    formatted: string
+    note: string
+  }
+  appFee: {
+    amount: number
+    formatted: string
+    note: string
+  }
+  cardIssuanceFee: {
+    amount: number
+    formatted: string
+  }
+  cardAnnualFee: {
+    amount: number
+    formatted: string
+  }
+  availableATMs: string[]
 }
 
 export interface CrawledPage {
@@ -225,45 +345,48 @@ export function getRelevantPages(keyword: string, maxPages: number = 5): Crawled
 export function getVerifiedFactsContext(): string {
   const data = habittoData
 
+  // Get the latest Series A funding round
+  const seriesA = data.funding.rounds.find(r => r.name === 'Series A')
+
   return `
 # 【重要】Habitto正確データ（これ以外の数字を使用しないでください）
 
 ## 会社情報
 - 正式名称: ${data.company.legalName}
-- 登録番号: ${data.company.registrationNumber}
+- 登録番号: ${data.company.registration.number}
 - 設立: ${data.company.founded}
-- CEO: ${data.company.leadership.ceo}
-- COO: ${data.company.leadership.coo}
+- サービス開始: ${data.company.serviceLaunch}
 
 ## 貯蓄口座
-- 金利: ${data.savingsAccount.interestRate}（${data.savingsAccount.maxBalance}まで）
-- 条件: ${data.savingsAccount.conditions}
-- 差別化ポイント: ${data.savingsAccount.differentiator}
+- 金利: ${data.savingsAccount.interestRate.rate}（${data.savingsAccount.interestRate.maxAmountFormatted}まで）
+- 条件: ${data.savingsAccount.interestRate.conditions}
+- 口座タイプ: ${data.savingsAccount.accountType}
 
 ## デビットカード
 - キャッシュバック: ${data.debitCard.cashbackRate}
-- 条件: ${data.debitCard.conditions}
+- キャッシュバック条件: 条件なし（全ての買い物が対象）
 - 特徴: ${data.debitCard.features.join('、')}
 
 ## アドバイザー
 - 費用: ${data.advisor.cost}
-- 差別化: ${data.advisor.differentiator}
-- サービス内容: ${data.advisor.services.join('、')}
+- 資格: ${data.advisor.qualification}
+- 相談方法: ${data.advisor.methods.join('、')}
+- 相談内容: ${data.advisor.topics.join('、')}
 
 ## 手数料
-- ATM出金: ${data.fees.atmWithdrawal}
-- 他行宛振込: ${data.fees.domesticTransfer}
-- ※${data.fees.freeTransfersNote}
+- ATM出金: ${data.fees.atmFee.withdrawal.formatted}（無料回数を超過した場合）
+- 他行宛振込: ${data.fees.transferFee.toOtherBank.formatted}（無料回数を超過した場合）
+- 口座維持手数料: ${data.fees.accountFee.formatted}
 
 ## 資金調達
-- シリーズA: ${data.funding.seriesA.amount}（${data.funding.seriesA.date}）
-- リード投資家: ${data.funding.seriesA.leadInvestor}
+- シリーズA: ${seriesA?.amount}（${seriesA?.date}）
+- 累計調達額: ${data.funding.totalRaised.jpy}
 
 ## よくある間違い（絶対に避けること）
 ${data.commonMisconceptions.map(m => `- ❌ 間違い: ${m.wrong}\n  ✅ 正解: ${m.correct}`).join('\n')}
 
 ---
-【警告】上記以外の数字や事実は使用しないでください。特に他行宛振込手数料（${data.fees.domesticTransfer}）は間違いやすいので注意。
+【警告】上記以外の数字や事実は使用しないでください。特に他行宛振込手数料（${data.fees.transferFee.toOtherBank.formatted}）は間違いやすいので注意。
 `
 }
 
