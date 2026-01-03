@@ -73,13 +73,22 @@ export async function POST(req: NextRequest) {
 
     // Build system prompt with all context (including research)
     // Pass keyword to get relevant crawled page content for anti-hallucination
-    const systemPrompt = buildSystemPrompt(
-      project.system_prompt || '',
-      files.map(f => ({ name: f.name, content: f.content })),
-      nwQuery?.data || undefined,
-      research?.research_data || undefined,
-      conversation.keyword || undefined
-    )
+    console.log('[Chat] Building system prompt with keyword:', conversation.keyword)
+    let systemPrompt
+    try {
+      systemPrompt = buildSystemPrompt(
+        project.system_prompt || '',
+        files.map(f => ({ name: f.name, content: f.content })),
+        nwQuery?.data || undefined,
+        research?.research_data || undefined,
+        conversation.keyword || undefined
+      )
+      console.log('[Chat] System prompt built successfully, length:', systemPrompt.length, 'chars')
+      console.log('[Chat] Estimated tokens:', Math.ceil(systemPrompt.length / 3))
+    } catch (error) {
+      console.error('[Chat] ERROR building system prompt:', error)
+      throw new Error(`Failed to build system prompt: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
 
     // Save user message
     await addMessage(conversationId, 'user', message)
@@ -104,12 +113,14 @@ export async function POST(req: NextRequest) {
         let fullResponse = ''
 
         try {
+          console.log('[Chat] Starting Claude stream with', messages.length, 'messages')
           const claudeStream = anthropic.messages.stream({
             model: MODEL,
             max_tokens: MAX_TOKENS,
             system: systemPrompt,
             messages,
           })
+          console.log('[Chat] Claude stream created successfully')
 
           for await (const event of claudeStream) {
             if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
@@ -135,14 +146,20 @@ export async function POST(req: NextRequest) {
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           const errorStack = error instanceof Error ? error.stack : ''
+          const errorName = error instanceof Error ? error.name : 'Error'
+          const errorDetails = error instanceof Error && 'code' in error ? (error as any).code : null
 
           console.error('=== STREAM ERROR ===')
+          console.error('Error name:', errorName)
+          console.error('Error code:', errorDetails)
           console.error('Conversation ID:', conversationId)
+          console.error('Keyword:', conversation.keyword)
           console.error('Error:', errorMessage)
           console.error('Stack:', errorStack)
-          console.error('System prompt length:', systemPrompt.length)
+          console.error('System prompt length:', systemPrompt?.length || 0)
           console.error('Messages count:', messages.length)
           console.error('Partial content length:', fullResponse.length)
+          console.error('Full error object:', JSON.stringify(error, null, 2))
           console.error('====================')
 
           // IMPORTANT: Save partial content if we got any before the error
