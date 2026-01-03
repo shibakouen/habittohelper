@@ -16,7 +16,7 @@ import {
 } from '@/lib/writer-db'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60 // Research can take up to 60s
+export const maxDuration = 120 // Research can take up to 2 minutes
 
 /**
  * GET - Retrieve cached research for a conversation

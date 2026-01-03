@@ -17,7 +17,7 @@ import {
 } from '@/lib/writer-db'
 
 export const runtime = 'nodejs'
-export const maxDuration = 60 // 60 second timeout
+export const maxDuration = 300 // 5 minute timeout for long blog generation
 
 export async function POST(req: NextRequest) {
   try {
@@ -133,11 +133,28 @@ export async function POST(req: NextRequest) {
           console.error('Stack:', errorStack)
           console.error('System prompt length:', systemPrompt.length)
           console.error('Messages count:', messages.length)
+          console.error('Partial content length:', fullResponse.length)
           console.error('====================')
 
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
-          )
+          // IMPORTANT: Save partial content if we got any before the error
+          if (fullResponse.length > 100) {
+            console.log('[Chat] Saving partial content:', fullResponse.length, 'chars')
+            const partialContent = fullResponse + '\n\n---\n⚠️ *[生成が中断されました。もう一度お試しください]*'
+            await addMessage(conversationId, 'assistant', partialContent)
+
+            // Send partial completion event so frontend shows what we have
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({
+                text: '\n\n---\n⚠️ *[生成が中断されました]*',
+                partial: true
+              })}\n\n`)
+            )
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
+          } else {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
+            )
+          }
           controller.close()
         }
       },
