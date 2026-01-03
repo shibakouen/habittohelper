@@ -14,6 +14,7 @@ import {
   getCachedNWQuery,
   updateConversation,
   getResearch,
+  saveBlogFromContent,
 } from '@/lib/writer-db'
 
 export const runtime = 'nodejs'
@@ -119,6 +120,12 @@ export async function POST(req: NextRequest) {
 
           // Save assistant message to database
           await addMessage(conversationId, 'assistant', fullResponse)
+
+          // Auto-save to writer_blogs if this is a blog generation (has keyword)
+          if (conversation.keyword && fullResponse.length > 500) {
+            console.log('[Chat] Auto-saving blog for keyword:', conversation.keyword)
+            await saveBlogFromContent(conversationId, conversation.keyword, fullResponse)
+          }
 
           // Send done event
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))

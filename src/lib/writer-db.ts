@@ -615,3 +615,76 @@ export function parseBlogFrontmatter(content: string): {
     body: body.trim(),
   }
 }
+
+// ============================================================================
+// BLOGS
+// ============================================================================
+
+/**
+ * Save or update a blog entry from generated content
+ */
+export async function saveBlogFromContent(
+  conversationId: string,
+  keyword: string,
+  content: string,
+  score?: number | null
+): Promise<Blog | null> {
+  // Check if blog already exists for this conversation
+  const { data: existing } = await supabase
+    .from('writer_blogs')
+    .select('id')
+    .eq('conversation_id', conversationId)
+    .single()
+
+  // Parse the blog content
+  const parsed = parseBlogFrontmatter(content)
+
+  if (existing) {
+    // Update existing blog
+    const { data, error } = await supabase
+      .from('writer_blogs')
+      .update({
+        keyword,
+        title: parsed.title,
+        meta_description: parsed.meta_description,
+        target_service: parsed.target_service,
+        content,
+        score: score ?? null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[saveBlogFromContent] Update error:', error)
+      return null
+    }
+    console.log('[saveBlogFromContent] Updated blog:', data.id)
+    return data as Blog
+  } else {
+    // Insert new blog
+    const { data, error } = await supabase
+      .from('writer_blogs')
+      .insert({
+        conversation_id: conversationId,
+        keyword,
+        title: parsed.title,
+        meta_description: parsed.meta_description,
+        target_service: parsed.target_service,
+        content,
+        score: score ?? null,
+        status: 'draft',
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('[saveBlogFromContent] Insert error:', error)
+      return null
+    }
+    console.log('[saveBlogFromContent] Created blog:', data.id)
+    return data as Blog
+  }
+}
+
