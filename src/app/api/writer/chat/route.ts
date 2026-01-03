@@ -72,11 +72,13 @@ export async function POST(req: NextRequest) {
     console.log('[Chat] Research results count:', research?.research_data?.results?.length || 0)
 
     // Build system prompt with all context (including research)
+    // Pass keyword to get relevant crawled page content for anti-hallucination
     const systemPrompt = buildSystemPrompt(
       project.system_prompt || '',
       files.map(f => ({ name: f.name, content: f.content })),
       nwQuery?.data || undefined,
-      research?.research_data || undefined
+      research?.research_data || undefined,
+      conversation.keyword || undefined
     )
 
     // Save user message

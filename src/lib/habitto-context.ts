@@ -4,8 +4,16 @@
  * Contains comprehensive brand voice, internal links, differentiators,
  * and prompts for generating Habitto-style content.
  *
- * Based on scraped data from habitto.com and brand guidelines.
+ * IMPORTANT: Factual data now comes from habitto-verified-data.json
+ * to prevent hallucination. This file provides writing guidelines only.
  */
+
+import {
+  getVerifiedFactsContext,
+  getPageContentContext,
+  getMainServicePagesContext,
+  habittoData,
+} from './habitto-data'
 
 // ============================================================================
 // BRAND IDENTITY
@@ -765,15 +773,31 @@ export function insertLinks(
 
 /**
  * Get the full context for blog writing
+ * Now includes verified facts from JSON to prevent hallucination
  */
-export function getFullWritingContext(): string {
+export function getFullWritingContext(keyword?: string): string {
+  // Get verified facts from the JSON (anti-hallucination)
+  const verifiedFacts = getVerifiedFactsContext()
+
+  // Get relevant page content if keyword provided
+  const relevantPages = keyword ? getPageContentContext(keyword) : ''
+
+  // Get main service pages content
+  const servicePagesContent = getMainServicePagesContext()
+
   return `${WRITER_SYSTEM_PROMPT}
+
+${verifiedFacts}
 
 ${VALUE_INTEGRATION_INSTRUCTIONS}
 
 ${PAGE_CONTENT_CONTEXT}
 
 ${INTERNAL_LINKING_INSTRUCTIONS}
+
+${servicePagesContent}
+
+${relevantPages}
 
 ---
 
@@ -784,5 +808,14 @@ ${SAMPLE_CONTENT.good.map(s => `- ${s.type}: ${s.text}`).join('\n')}
 
 ### 悪い例（避けること）：
 ${SAMPLE_CONTENT.bad.map(s => `- ${s.type}: ${s.text}`).join('\n')}
+
+---
+
+## データソース情報
+- 最終検証日: ${habittoData._metadata.lastVerified}
+- クロール日: ${habittoData.crawlMetadata.crawlDate}
+- 総ページ数: ${habittoData.crawlMetadata.totalPagesCrawled}ページ
+
+【重要】上記の検証済みデータのみを使用してください。
 `
 }

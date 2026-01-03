@@ -46,6 +46,7 @@ interface ResearchData {
 
 /**
  * Build system prompt from project data
+ * @param keyword - Optional keyword to get relevant page content for anti-hallucination
  */
 export function buildSystemPrompt(
   projectSystemPrompt: string,
@@ -55,10 +56,12 @@ export function buildSystemPrompt(
     competitorHeadings: string[]
     topKeywords: Array<{ term: string; weight: number }>
   },
-  researchData?: ResearchData
+  researchData?: ResearchData,
+  keyword?: string
 ): string {
   // ALWAYS start with the full Habitto writing context
-  const habittoContext = getFullWritingContext()
+  // Pass keyword to get relevant crawled page content (anti-hallucination)
+  const habittoContext = getFullWritingContext(keyword)
 
   // Combine: Habitto context first, then any project-specific additions
   let systemPrompt = habittoContext
