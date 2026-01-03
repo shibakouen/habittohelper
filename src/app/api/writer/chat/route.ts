@@ -50,8 +50,10 @@ export async function POST(req: NextRequest) {
 
     // Get context: files, NeuronWriter data, research, previous messages
     console.log('[Chat] === BUILDING CONTEXT ===')
+    console.log('[Chat] Conversation ID:', conversationId)
     console.log('[Chat] Conversation keyword:', conversation.keyword)
     console.log('[Chat] Project ID:', project.id)
+    console.log('[Chat] User message:', message)
 
     const [files, existingMessages, nwQuery, research] = await Promise.all([
       getProjectFiles(project.id),
@@ -60,10 +62,13 @@ export async function POST(req: NextRequest) {
       getResearch(conversationId),
     ])
 
+    console.log('[Chat] Files count:', files.length)
+    console.log('[Chat] Existing messages:', existingMessages.length)
     console.log('[Chat] NW Query found:', !!nwQuery)
     console.log('[Chat] NW Query has data:', !!nwQuery?.data)
     console.log('[Chat] NW Query top keywords count:', nwQuery?.data?.topKeywords?.length || 0)
     console.log('[Chat] Research found:', !!research)
+    console.log('[Chat] Research results count:', research?.research_data?.results?.length || 0)
 
     // Build system prompt with all context (including research)
     const systemPrompt = buildSystemPrompt(
@@ -119,9 +124,19 @@ export async function POST(req: NextRequest) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
           controller.close()
         } catch (error) {
-          console.error('Stream error:', error)
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+          const errorStack = error instanceof Error ? error.stack : ''
+
+          console.error('=== STREAM ERROR ===')
+          console.error('Conversation ID:', conversationId)
+          console.error('Error:', errorMessage)
+          console.error('Stack:', errorStack)
+          console.error('System prompt length:', systemPrompt.length)
+          console.error('Messages count:', messages.length)
+          console.error('====================')
+
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ error: 'Stream failed' })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ error: errorMessage })}\n\n`)
           )
           controller.close()
         }

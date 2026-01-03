@@ -264,6 +264,22 @@ export default function WriterPage() {
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6))
+
+              // Handle error from server
+              if (data.error) {
+                console.error('[Stream] Server error:', data.error)
+                setGenerationStatus(`Error: ${data.error}`)
+                // Show error message in chat
+                const errorMsg: Message = {
+                  id: `error-${Date.now()}`,
+                  role: 'assistant',
+                  content: `⚠️ エラーが発生しました: ${data.error}\n\nもう一度お試しください。`,
+                }
+                setMessages(prev => [...prev, errorMsg])
+                setStreamingContent('')
+                break
+              }
+
               if (data.text) {
                 fullContent += data.text
                 setStreamingContent(fullContent)
@@ -277,7 +293,8 @@ export default function WriterPage() {
                 setMessages(prev => [...prev, assistantMsg])
                 setStreamingContent('')
               }
-            } catch {
+            } catch (parseError) {
+              console.warn('[Stream] Failed to parse SSE data:', line, parseError)
               // Skip malformed JSON
             }
           }
@@ -366,20 +383,38 @@ export default function WriterPage() {
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
-            const data = JSON.parse(line.slice(6))
-            if (data.text) {
-              fullContent += data.text
-              setStreamingContent(fullContent)
-            }
-            if (data.done) {
-              // Add complete message
-              const assistantMsg: Message = {
-                id: `msg-${Date.now()}`,
-                role: 'assistant',
-                content: fullContent,
+            try {
+              const data = JSON.parse(line.slice(6))
+
+              // Handle error from server
+              if (data.error) {
+                console.error('[Chat] Server error:', data.error)
+                const errorMsg: Message = {
+                  id: `error-${Date.now()}`,
+                  role: 'assistant',
+                  content: `⚠️ エラーが発生しました: ${data.error}\n\nもう一度お試しください。`,
+                }
+                setMessages(prev => [...prev, errorMsg])
+                setStreamingContent('')
+                break
               }
-              setMessages(prev => [...prev, assistantMsg])
-              setStreamingContent('')
+
+              if (data.text) {
+                fullContent += data.text
+                setStreamingContent(fullContent)
+              }
+              if (data.done) {
+                // Add complete message
+                const assistantMsg: Message = {
+                  id: `msg-${Date.now()}`,
+                  role: 'assistant',
+                  content: fullContent,
+                }
+                setMessages(prev => [...prev, assistantMsg])
+                setStreamingContent('')
+              }
+            } catch (parseError) {
+              console.warn('[Chat] Failed to parse SSE data:', line, parseError)
             }
           }
         }
