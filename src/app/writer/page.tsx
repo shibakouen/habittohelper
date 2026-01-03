@@ -296,6 +296,35 @@ export default function WriterPage() {
                 }
                 setMessages(prev => [...prev, assistantMsg])
                 setStreamingContent('')
+
+                // Auto-score: Push content to NeuronWriter immediately after generation
+                if (fullContent && keyword && selectedProject) {
+                  setGenerationStatus('Scoring content...')
+                  try {
+                    const scoreRes = await fetch('/api/writer/neuronwriter', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        action: 'score',
+                        projectId: selectedProject.id,
+                        conversationId: selectedConversation?.id,
+                        keyword,
+                        content: fullContent,
+                      }),
+                    })
+                    const scoreData = await scoreRes.json()
+                    if (scoreData.score !== undefined) {
+                      setScore(scoreData.score)
+                      setGenerationStatus(`✅ Complete! Score: ${scoreData.score}`)
+                    } else if (scoreData.error) {
+                      console.error('[Auto-score] Error:', scoreData.error)
+                      setGenerationStatus('⚠️ Blog written, scoring failed')
+                    }
+                  } catch (scoreError) {
+                    console.error('[Auto-score] Failed:', scoreError)
+                    setGenerationStatus('⚠️ Blog written, scoring failed')
+                  }
+                }
               }
             } catch (parseError) {
               console.warn('[Stream] Failed to parse SSE data:', line, parseError)
