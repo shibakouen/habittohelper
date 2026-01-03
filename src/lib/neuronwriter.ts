@@ -219,14 +219,16 @@ export async function analyzeKeyword(keyword: string): Promise<NeuronWriterAnaly
 
       if (statusResponse.status === 'error') {
         console.warn('[NeuronWriter] Query failed')
-        return getFallbackAnalysis(keyword)
+        // Pass queryId so we can still import content to NeuronWriter later
+        return getFallbackAnalysis(keyword, queryId)
       }
 
       attempts++
     }
 
     console.warn('[NeuronWriter] Timeout waiting for query')
-    return getFallbackAnalysis(keyword)
+    // Pass queryId so we can still import content to NeuronWriter later
+    return getFallbackAnalysis(keyword, queryId)
   } catch (error) {
     console.error('[NeuronWriter] === ERROR CAUGHT ===')
     console.error('[NeuronWriter] Error type:', typeof error)
@@ -285,17 +287,20 @@ function parseQueryResponse(response: GetQueryResponse, queryId?: string): Neuro
   }
 
   console.warn('[NeuronWriter] No entities found in response.terms, using fallback')
-  return getFallbackAnalysis('')
+  // Pass queryId to preserve it even when using fallback data
+  return getFallbackAnalysis('', queryId)
 }
 
 /**
  * Get fallback analysis when NeuronWriter is unavailable
+ * IMPORTANT: Always pass queryId if available to prevent fake IDs from being stored
  */
-function getFallbackAnalysis(keyword: string): NeuronWriterAnalysis {
+function getFallbackAnalysis(keyword: string, queryId?: string): NeuronWriterAnalysis {
   // Generate reasonable defaults based on the keyword
   const relatedTerms = generateRelatedTerms(keyword)
 
   return {
+    queryId, // Preserve real NeuronWriter queryId even when using fallback data
     recommendedTerms: relatedTerms,
     competitorHeadings: [
       `${keyword}とは？基礎知識を解説`,
